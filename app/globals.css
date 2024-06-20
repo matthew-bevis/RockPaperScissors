@@ -146,12 +146,27 @@ body {
 }
 
 @media (min-width: 2000px) {
-  .rock {
+  .rock:not(.animating, .winnerContainer) {
     transform: translate(30%, -30%) !important;
   }
-  .paper {
+  .paper:not(.animating, .winnerContainer) {
     transform: translate(-30%, -30%) !important;
   }
+  .scissors:not(.animating, .winnerContainer) {
+    transform: translateY(10%)
+  }
+}
+
+.animating .rock,
+.animating .paper,
+.animating .scissors {
+  transform: none !important;
+}
+
+.winnerContainer .rock,
+.winnerContainer .paper,
+.winnerContainer .scissors {
+  transform: none !important;
 }
 
 .resultContainer {
@@ -192,20 +207,124 @@ body {
   transform: none;
 }
 
-@keyframes floatInFromLeft {
+.winnerContainer {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 20vw;
+  height: 20vw;
+}
+
+.winner {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  background-color: #fff;
+  box-shadow: 0 1em 2em rgba(43, 43, 43, 0.1);
+  z-index: 1;
+
+}
+
+/* Animations */
+@keyframes slideInFromLeft {
   0% { transform: translateX(-100%); }
   100% { transform: translateX(0); }
 }
 
-@keyframes floatInFromRight {
+@keyframes slideInFromRight {
   0% { transform: translateX(100%); }
   100% { transform: translateX(0); }
 }
 
-.resultContainer .userSelection {
-  animation: floatInFromLeft 0.5s forwards;
+@keyframes rearBackUser {
+  0% { transform: translateX(0); }
+  100% { transform: translateX(-500%); }
 }
 
-.resultContainer .opponentSelection {
-  animation: floatInFromRight 0.5s forwards;
+@keyframes rearBackOpponent {
+  0% { transform: translateX(0); }
+  100% { transform: translateX(500%); }
+}
+
+@keyframes slamTogether {
+  0% { transform: translateX(0); }
+  100% { transform: translateX(-10); }
+}
+
+@keyframes explode {
+  0% { opacity: 0; }
+  100% { opacity: 1; }
+}
+
+@keyframes fadeOut {
+  0% { opacity: 1; }
+  100% { opacity: 0; }
+}
+
+.slideIn .userSelection {
+  animation: slideInFromLeft 0.5s forwards;
+}
+
+.slideIn .opponentSelection {
+  animation: slideInFromRight 0.5s forwards;
+}
+
+.rearBack .userSelection {
+  animation: rearBackUser 0.5s forwards;
+}
+
+.rearBack .opponentSelection {
+  animation: rearBackOpponent 0.5s forwards;
+}
+
+.slamTogether .userSelection,
+.slamTogether .opponentSelection {
+  animation: slamTogether 0.5s forwards;
+}
+
+.explode .explosion {
+  animation: explode 0.5s forwards, fadeOut 0.5s 0.5s forwards;
+  z-index: 0;
+}
+.explosion {
+  opacity: 0;
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+}
+
+
+.particle {
+  width: 2rem;
+  height: 2rem;
+  background-color: yellow;
+  border-radius: 50%;
+}
+
+.hidden {
+  opacity: 0;
+  pointer-events: none;
+}
+
+.retryButton {
+  position: absolute;
+  top: 120%; /* Position below the winner */
+  left: 50%;
+  transform: translatex(-50%);
+  margin-top: 20px; /* Ensure there's some space between the winner and the button */
+}
+
+.resultMessage {
+  text-align: center;
+  color: white;
+  font-size: 4rem;
 }

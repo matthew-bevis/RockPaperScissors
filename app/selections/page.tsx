@@ -1,13 +1,19 @@
 'use client';
 
-import { useState } from "react";
-import { Grid } from "@mui/material";
+import { useState, useRef, useEffect } from "react";
+import { Grid, Button } from "@mui/material";
 import Image from "next/image";
+import gsap from "gsap";
 
 const Selections: React.FC = () => {
   const [userSelection, setUserSelection] = useState<string | null>(null);
   const [opponentSelection, setOpponentSelection] = useState<string | null>(null);
   const [showResult, setShowResult] = useState<boolean>(false);
+  const [animationStage, setAnimationStage] = useState<string>("");
+
+  const userSelectionRef = useRef<HTMLDivElement>(null);
+  const opponentSelectionRef = useRef<HTMLDivElement>(null);
+  const explosionRef = useRef<HTMLDivElement>(null);
 
   const selections = ["rock", "paper", "scissors"];
 
@@ -17,16 +23,84 @@ const Selections: React.FC = () => {
       const opponentMove = selections[Math.floor(Math.random() * selections.length)];
       setOpponentSelection(opponentMove);
       setShowResult(true);
-    }, 500); // Delay to sync with the animation duration
+      setAnimationStage("slideIn");
+  
+      // Slide in animations
+      gsap.fromTo(userSelectionRef.current, { x: '-100%', transform: 'none' }, { x: '0%', duration: 0.3, clearProps: 'transform' });
+      gsap.fromTo(opponentSelectionRef.current, { x: '100%', transform: 'none' }, { x: '0%', duration: 0.3, clearProps: 'transform', onComplete: () => {
+        // Rear back animations
+        setAnimationStage("rearBack");
+        gsap.to(userSelectionRef.current, { x: '-20%', duration: 0.2, clearProps: 'transform' });
+        gsap.to(opponentSelectionRef.current, { x: '20%', duration: 0.2, clearProps: 'transform', onComplete: () => {
+          // Slam together animations
+          setAnimationStage("slamTogether");
+          gsap.to(userSelectionRef.current, { x: '0%', duration: 0.2, clearProps: 'transform' });
+          gsap.to(opponentSelectionRef.current, { x: '0%', duration: 0.2, clearProps: 'transform', onComplete: () => {
+            // Ensure selections touch in the middle
+            gsap.to(userSelectionRef.current, { x: '0%', duration: 0, clearProps: 'transform' });
+            gsap.to(opponentSelectionRef.current, { x: '0%', duration: 0, clearProps: 'transform' });
+            // Hide selections and start explosion
+            gsap.to(userSelectionRef.current, { opacity: 0, duration: 0 });
+            gsap.to(opponentSelectionRef.current, { opacity: 0, duration: 0 });
+            setAnimationStage("explode");
+            createExplosion();
+            gsap.to(explosionRef.current, { opacity: 1, scale: 1, duration: 0.2 });
+            gsap.to(explosionRef.current, { opacity: 0, scale: 1.5, duration: 0.2, delay: 0.1, onComplete: () => {
+              // Show winner immediately after the explosion
+              setAnimationStage("showWinner");
+            }});
+          }});
+        }});
+      }});
+    }, 500); // Initial delay
+  };
+
+  const createExplosion = () => {
+    if (explosionRef.current) {
+      for (let i = 0; i < 30; i++) {
+        const particle = document.createElement("div");
+        particle.className = "particle";
+        explosionRef.current.appendChild(particle);
+        gsap.to(particle, {
+          x: (Math.random() - 0.5) * 200,
+          y: (Math.random() - 0.5) * 200,
+          scale: Math.random() * 200,
+          opacity: 0,
+          duration: 1,
+          onComplete: () => explosionRef.current?.removeChild(particle),
+        });
+      }
+    }
+  };
+
+  const determineWinner = () => {
+    if (userSelection === opponentSelection) {
+      return "tie";
+    }
+    if (
+      (userSelection === "rock" && opponentSelection === "scissors") ||
+      (userSelection === "scissors" && opponentSelection === "paper") ||
+      (userSelection === "paper" && opponentSelection === "rock")
+    ) {
+      return userSelection;
+    }
+    return opponentSelection;
+  };
+
+  const winner = determineWinner();
+
+  const resetGame = () => {
+    setUserSelection(null);
+    setOpponentSelection(null);
+    setShowResult(false);
+    setAnimationStage("");
   };
 
   return (
     <Grid container className="selections">
       {!showResult && (
         <>
-          <div className="backgroundImageContainer">
-            <Image src='/images/bg-triangle.svg' alt='background triangle' layout='fill' objectFit='contain'/>
-          </div>
+          <Image src='/images/bg-triangle.svg' alt='background triangle' layout='fill' objectFit='contain'/>
           <Grid container className="firstRow">
             <Grid item className="rockContainer" onClick={() => handleSelection("rock")}>
               <Grid container className="iconCircle rock">
@@ -47,20 +121,58 @@ const Selections: React.FC = () => {
         </>
       )}
       {showResult && (
-        <div className="resultContainer">
-          <div className={`userSelection iconCircle ${userSelection}`}>
-            <Image src={`/images/icon-${userSelection}.svg`} alt={`Selected ${userSelection}`} width={100} height={100} />
-          </div>
-          {opponentSelection && (
-            <div className={`opponentSelection iconCircle ${opponentSelection}`}>
-              <Image src={`/images/icon-${opponentSelection}.svg`} alt={`Opponent selected ${opponentSelection}`} width={100} height={100} />
-            </div>
-          )}
+  <div className={`resultContainer ${animationStage}`}>
+    <div
+      ref={userSelectionRef}
+      className={`userSelection iconCircle ${userSelection} ${animationStage === "showWinner" || animationStage === "explode" ? "hidden" : ""} ${animationStage ? "animating" : ""}`}
+    >
+      <Image src={`/images/icon-${userSelection}.svg`} alt={`Selected ${userSelection}`} width={100} height={100} />
+    </div>
+    {opponentSelection && (
+      <div
+        ref={opponentSelectionRef}
+        className={`opponentSelection iconCircle ${opponentSelection} ${animationStage === "showWinner" || animationStage === "explode" ? "hidden" : ""} ${animationStage ? "animating" : ""}`}
+      >
+        <Image src={`/images/icon-${opponentSelection}.svg`} alt={`Opponent selected ${opponentSelection}`} width={100} height={100} />
+      </div>
+    )}
+    <div ref={explosionRef} className="explosion"></div>
+  </div>
+)}
+
+      {animationStage === "showWinner" && (
+  <div className="winnerContainer">
+    {winner === "tie" ? (
+      <>
+        <div className="resultMessage">
+          <h2>It's a Tie!</h2>
         </div>
-      )}
+        <Button variant="contained" color="primary" onClick={resetGame} className="retryButton">
+          Retry
+        </Button>
+      </>
+    ) : (
+      <>
+        <div className={`winner iconCircle  result ${winner}`}>
+          <Image src={`/images/icon-${winner}.svg`} alt={`Winner ${winner}`} width={100} height={100} />
+        </div>
+        <Button variant="contained" color="primary" onClick={resetGame} className="retryButton">
+          Retry
+        </Button>
+      </>
+    )}
+  </div>
+)}
     </Grid>
   );
 };
 
 export default Selections;
+
+
+
+
+
+
+
 
