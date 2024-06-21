@@ -1,15 +1,21 @@
 'use client';
 
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef } from "react";
 import { Grid, Button } from "@mui/material";
 import Image from "next/image";
 import gsap from "gsap";
 
-const Selections: React.FC = () => {
+interface SelectionsProps {
+  winCount: number;
+  setWinCount: (count: number) => void;
+}
+
+const Selections: React.FC<SelectionsProps> = ({ winCount, setWinCount }) => {
   const [userSelection, setUserSelection] = useState<string | null>(null);
   const [opponentSelection, setOpponentSelection] = useState<string | null>(null);
   const [showResult, setShowResult] = useState<boolean>(false);
   const [animationStage, setAnimationStage] = useState<string>("");
+  const [winner, setWinner] = useState<string | null>(null);
 
   const userSelectionRef = useRef<HTMLDivElement>(null);
   const opponentSelectionRef = useRef<HTMLDivElement>(null);
@@ -24,7 +30,26 @@ const Selections: React.FC = () => {
       setOpponentSelection(opponentMove);
       setShowResult(true);
       setAnimationStage("slideIn");
-  
+
+      // Determine the winner
+      const determineWinner = (user: string, opponent: string) => {
+        if (user === opponent) {
+          return "tie";
+        }
+        if (
+          (user === "rock" && opponent === "scissors") ||
+          (user === "scissors" && opponent === "paper") ||
+          (user === "paper" && opponent === "rock")
+        ) {
+          setWinCount(winCount + 1);
+          return user;
+        }
+        setWinCount(0);
+        return opponent;
+      };
+
+      setWinner(determineWinner(selection, opponentMove));
+
       // Slide in animations
       gsap.fromTo(userSelectionRef.current, { x: '-100%', transform: 'none' }, { x: '0%', duration: 0.3, clearProps: 'transform' });
       gsap.fromTo(opponentSelectionRef.current, { x: '100%', transform: 'none' }, { x: '0%', duration: 0.3, clearProps: 'transform', onComplete: () => {
@@ -67,33 +92,21 @@ const Selections: React.FC = () => {
           scale: Math.random() * 200,
           opacity: 0,
           duration: 1,
-          onComplete: () => explosionRef.current?.removeChild(particle),
+          onComplete: () => { if (explosionRef.current) {
+            explosionRef.current.removeChild(particle);
+          }
+        },
         });
       }
     }
   };
-
-  const determineWinner = () => {
-    if (userSelection === opponentSelection) {
-      return "tie";
-    }
-    if (
-      (userSelection === "rock" && opponentSelection === "scissors") ||
-      (userSelection === "scissors" && opponentSelection === "paper") ||
-      (userSelection === "paper" && opponentSelection === "rock")
-    ) {
-      return userSelection;
-    }
-    return opponentSelection;
-  };
-
-  const winner = determineWinner();
 
   const resetGame = () => {
     setUserSelection(null);
     setOpponentSelection(null);
     setShowResult(false);
     setAnimationStage("");
+    setWinner(null);
   };
 
   return (
@@ -121,53 +134,61 @@ const Selections: React.FC = () => {
         </>
       )}
       {showResult && (
-  <div className={`resultContainer ${animationStage}`}>
-    <div
-      ref={userSelectionRef}
-      className={`userSelection iconCircle ${userSelection} ${animationStage === "showWinner" || animationStage === "explode" ? "hidden" : ""} ${animationStage ? "animating" : ""}`}
-    >
-      <Image src={`/images/icon-${userSelection}.svg`} alt={`Selected ${userSelection}`} width={100} height={100} />
-    </div>
-    {opponentSelection && (
-      <div
-        ref={opponentSelectionRef}
-        className={`opponentSelection iconCircle ${opponentSelection} ${animationStage === "showWinner" || animationStage === "explode" ? "hidden" : ""} ${animationStage ? "animating" : ""}`}
-      >
-        <Image src={`/images/icon-${opponentSelection}.svg`} alt={`Opponent selected ${opponentSelection}`} width={100} height={100} />
-      </div>
-    )}
-    <div ref={explosionRef} className="explosion"></div>
-  </div>
-)}
-
+        <div className={`resultContainer ${animationStage}`}>
+          <div
+            ref={userSelectionRef}
+            className={`userSelection iconCircle ${userSelection} ${animationStage === "showWinner" || animationStage === "explode" ? "hidden" : ""} ${animationStage ? "animating" : ""}`}
+          >
+            <Image src={`/images/icon-${userSelection}.svg`} alt={`Selected ${userSelection}`} width={100} height={100} />
+          </div>
+          {opponentSelection && (
+            <div
+              ref={opponentSelectionRef}
+              className={`opponentSelection iconCircle ${opponentSelection} ${animationStage === "showWinner" || animationStage === "explode" ? "hidden" : ""} ${animationStage ? "animating" : ""}`}
+            >
+              <Image src={`/images/icon-${opponentSelection}.svg`} alt={`Opponent selected ${opponentSelection}`} width={100} height={100} />
+            </div>
+          )}
+          <div ref={explosionRef} className="explosion"></div>
+        </div>
+      )}
       {animationStage === "showWinner" && (
-  <div className="winnerContainer">
-    {winner === "tie" ? (
-      <>
-        <div className="resultMessage">
-          <h2>It's a Tie!</h2>
+        <div className="winnerContainer">
+          {winner === "tie" ? (
+            <>
+              <div className="resultMessage">
+                <h2>It&apos;s a Tie!</h2>
+              </div>
+              <Button variant="contained" color="primary" onClick={resetGame} className="retryButton">
+                Retry
+              </Button>
+            </>
+          ) : (
+            <>
+              <div className="resultMessage">
+                {winner === userSelection ? (
+                  <h2>You Win!</h2>
+                ) : (
+                  <h2>You Lose!</h2>
+                )}
+              </div>
+              <div className={`winner iconCircle result ${winner}`}>
+                <Image src={`/images/icon-${winner}.svg`} alt={`Winner ${winner}`} width={100} height={100} />
+              </div>
+              <Button variant="contained" color="primary" onClick={resetGame} className="retryButton">
+                Retry
+              </Button>
+            </>
+          )}
         </div>
-        <Button variant="contained" color="primary" onClick={resetGame} className="retryButton">
-          Retry
-        </Button>
-      </>
-    ) : (
-      <>
-        <div className={`winner iconCircle  result ${winner}`}>
-          <Image src={`/images/icon-${winner}.svg`} alt={`Winner ${winner}`} width={100} height={100} />
-        </div>
-        <Button variant="contained" color="primary" onClick={resetGame} className="retryButton">
-          Retry
-        </Button>
-      </>
-    )}
-  </div>
-)}
+      )}
     </Grid>
   );
 };
 
 export default Selections;
+
+
 
 
 
